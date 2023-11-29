@@ -16,3 +16,140 @@ db.topics.aggregate([
         ]}
     }
 ])
+
+
+
+
+
+/*Find all the company drives which appeared between 15 oct-2020 and 31-oct-2020*/
+
+db.companydrives.find(
+    {$or:
+        [{drive_date:
+            {$gte:new Date("15-oct-2020")}
+          },
+         {drive_date:
+            {$lte:new Date("31-0ct-2020")}
+         }]
+    }).pretty()
+
+
+
+
+
+/*Find all the company drives and students who are appeared for the placement.*/
+
+db.companydrives.aggregate([
+    {
+        $lookup: {
+              from:"users",
+              localField:"userid",
+              foreignField:"userid",
+              as :"userinfo"
+             }
+    },
+    {
+        $project:{
+            _id:0,
+            "userinfo.name":1,
+            company:1,
+            drive_date:1,
+            "userinfo.email":1,
+            "userinfo.userid":1
+        }
+    }
+    ]).pretty()
+
+
+
+
+/*Find the number of problems solved by the user in codekata*/
+
+db.codekata.aggregate([
+    {
+        $lookup: {
+               from: "users",
+               localField: "userid",
+               foreignField: "userid",
+               as: "userinfo"
+             }
+    },
+    {
+        $project:{
+            _id:0,userid:1,problems:1,"userinfo.name":1
+        }
+    }
+    ]).pretty()
+
+
+
+
+/*Find all the mentors with who has the mentee's count more than 15*/
+
+db.users.aggregate([
+   {$lookup: {
+          from: "mentors",
+          localField: "mentorid",
+          foreignField: "mentorid",
+          as: "mentorInfo"
+        }},
+   {$group:{_id:{mentorid:"$mentorInfo.mentorid",mentorname:"$mentorInfo.mentorname"},mento_count:{$sum:1}}},
+   {$match:{mento_count:{$gt:15}}},
+   
+   ])
+
+
+
+
+/* Find the number of users who are absent and task is not submitted  between 15 oct-2020 and 31-oct-2020 */
+
+db.attendance.aggregate([
+    {
+        $match: {
+            attended: false
+        }
+    },
+    {
+        $lookup: {
+            from: "tasks",
+            localField: "userid",
+            foreignField: "userid",
+            as: "taskinfo"
+        }
+    },
+    {
+        $match: {
+            $or: [
+                {
+                    "taskinfo": { $exists: false }
+                },
+                {
+                    $and: [
+                        { "taskinfo.submitted": false },
+                        { "taskinfo.due_date": { $gte: new Date("2020-10-15") } },
+                        { "taskinfo.due_date": { $lte: new Date("2020-10-31") } }
+                    ]
+                }
+            ]
+        }
+    },
+    {
+        $group: {
+            _id: null,
+            totalUsers: { $sum: 1 }
+        }
+    }
+]);
+
+
+
+
+
+
+
+
+
+
+
+
+
